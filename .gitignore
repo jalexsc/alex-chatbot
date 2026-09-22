@@ -1,0 +1,18 @@
+# Repo con alcance reducido: solo lo necesario para el chatbot Alex.
+# Ignora todo por defecto...
+/*
+# ...y permite explícitamente lo que necesita alex-chatbot.
+!/alex-chatbot/
+!/folio_login_module.py
+!/README.md
+!/.gitignore
+
+# Generados / entorno / secretos (nunca se suben)
+**/__pycache__/
+**/*.pyc
+**/.venv/
+alex-chatbot/backend/.env
+alex-chatbot/frontend/node_modules/
+alex-chatbot/frontend/dist/
+okapi_customers.json
+**/okapi_customers.json
