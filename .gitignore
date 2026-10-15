@@ -4,6 +4,7 @@
 # ...y permite explícitamente lo que necesita alex-chatbot.
 !/alex-chatbot/
 !/folio_login_module.py
+!/folio_items_by_hrid.py
 !/README.md
 !/.gitignore
 
