@@ -7,6 +7,7 @@
 !/folio_login_module.py
 !/README.md
 !/CLAUDE.md
+!/.devcontainer/
 !/.gitignore
 
 # Generados / entorno / secretos (nunca se suben)

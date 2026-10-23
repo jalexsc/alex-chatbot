@@ -1,0 +1,26 @@
+{
+  "name": "LibriNova (BiblioSelect)",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "containerEnv": {
+    "BIBLIOSELECT_DEV_AUTH": "1",
+    "BIBLIOSELECT_TZ": "America/Bogota"
+  },
+  "postCreateCommand": "cd biblioselect/backend && pip install -r requirements.txt && python -m app.seed",
+  "postAttachCommand": {
+    "servidor": "cd biblioselect/backend && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+  },
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "LibriNova", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"],
+      "settings": {
+        "python.testing.pytestEnabled": true,
+        "python.testing.cwd": "${workspaceFolder}/biblioselect/backend",
+        "python.testing.pytestArgs": ["-q"]
+      }
+    }
+  }
+}

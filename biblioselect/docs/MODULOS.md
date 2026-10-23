@@ -39,10 +39,14 @@ Si el cambio cruza módulos, nómbralos todos: `[M3+M10] Recordatorio por plazo 
 | M11 | Agente IA y MCP | ⚪ Pendiente | Referencia: `alex-chatbot/backend/agent.py` (bucle de tools) | — |
 | M12 | Dashboard e informes | ⚪ Pendiente | — | — |
 | M13 | Interfaz y diseño | 🟡 Página única con reloj | `app/static/index.html` (`clockBadge`) | Manual (navegador o Playwright) |
+| M13·nube | Prototipo en la nube de Claude | 🟡 Publicado: [artefacto](https://claude.ai/artifact/MMtEeYspTmykSk6KSAv6ZC) | `biblioselect/cloud/librinova.html` (reglas de M3 copiadas en JS: `T`, `computeClock`; datos en `requests/*` y `config/clock`) | Manual en el artefacto |
 
 Leyenda: ✅ completo · 🟡 parcial · ⚪ pendiente.
 
 ## Comandos
+
+Sin instalar nada: abrir el repositorio en GitHub Codespaces (`.devcontainer/`); arranca el servidor solo.
+
 
 Desde `biblioselect/backend`:
 
@@ -72,3 +76,4 @@ Añade una línea por cambio: `AAAA-MM-DD · M# · resumen · commit`.
 
 - 2026-10-23 · M0 M1 M3 M8 M9 M13 · MVP inicial · `e2d7df6`
 - 2026-10-23 · M3 M13 · Reloj de días por etapa con semáforo en bandeja, detalle e historial
+- 2026-10-23 · M13·nube M0 · Prototipo en artefacto de Claude y configuración de Codespaces

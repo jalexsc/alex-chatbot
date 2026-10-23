@@ -28,6 +28,14 @@ en el servidor.
 | Gestión de proveedores y cotizaciones | **Pendiente** |
 | Migraciones (Alembic) y Docker Compose con PostgreSQL | **Pendiente** |
 
+## Probar sin instalar nada
+
+- **Prototipo en la nube de Claude:** https://claude.ai/artifact/MMtEeYspTmykSk6KSAv6ZC (fuente:
+  `cloud/librinova.html`). Mismo flujo y reloj, datos compartidos entre quienes lo abren; roles simulados.
+- **Backend real en GitHub Codespaces:** en GitHub, botón *Code → Codespaces → Create codespace* sobre
+  esta rama. Instala dependencias, crea usuarios demo y arranca el servidor; las pruebas se ejecutan con
+  `cd biblioselect/backend && python -m pytest -q` en la terminal del navegador.
+
 ## Ejecutar en local
 
 Desde `biblioselect/backend`:

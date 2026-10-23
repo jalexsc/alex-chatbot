@@ -1,0 +1,728 @@
+<title>LibriNova</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
+<style>
+/* Layout: banda institucional arriba; una columna de trabajo (resumen → bandeja → detalle), máx. 1120px. */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --ink: #17202d;
+  --muted: #586478;
+  --line: #dde2ea;
+  --chip: #edf0f5;
+  --accent: #1d4e89;
+  --accent-ink: #ffffff;
+  --band: #15335a;
+  --band-ink: #f1f5fa;
+  --band-muted: #b9c8dc;
+  --ok: #1d7444;
+  --ok-bg: #e5f3ea;
+  --warn: #8f5400;
+  --warn-bg: #fcefd9;
+  --bad: #b3261e;
+  --bad-bg: #fbe8e6;
+  --focus: #2f6fc0;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151d; --surface: #18202b; --ink: #e6ebf2; --muted: #9ba7b8; --line: #2a3443; --chip: #222c39;
+    --accent: #8ab6ea; --accent-ink: #0c1522; --band: #0d1d31; --band-ink: #e9eff7; --band-muted: #93a7c2;
+    --ok: #74d3a0; --ok-bg: #15301f; --warn: #f1b75c; --warn-bg: #33270f; --bad: #f3908a; --bad-bg: #3b1b19; --focus: #8ab6ea;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151d; --surface: #18202b; --ink: #e6ebf2; --muted: #9ba7b8; --line: #2a3443; --chip: #222c39;
+  --accent: #8ab6ea; --accent-ink: #0c1522; --band: #0d1d31; --band-ink: #e9eff7; --band-muted: #93a7c2;
+  --ok: #74d3a0; --ok-bg: #15301f; --warn: #f1b75c; --warn-bg: #33270f; --bad: #f3908a; --bad-bg: #3b1b19; --focus: #8ab6ea;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+/* Banda */
+.band { background: var(--band); color: var(--band-ink); }
+.band .wrap { padding-block: 18px 16px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; }
+.brand h1 { font-size: 28px; letter-spacing: 0.2px; }
+.brand p { margin: 2px 0 0; color: var(--band-muted); font-size: 14px; }
+.role { display: grid; gap: 4px; }
+.role label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--band-muted); }
+.role select { min-width: 230px; }
+.notice { border-top: 1px solid rgba(255,255,255,0.12); }
+.notice .wrap { padding-block: 8px; font-size: 13px; color: var(--band-muted); }
+
+/* Controles */
+select, input, textarea, button { font: inherit; color: inherit; }
+select, input, textarea { width: 100%; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+textarea { min-height: 84px; resize: vertical; }
+.band select { background: var(--band-ink); color: #15335a; border-color: transparent; }
+button { cursor: pointer; border-radius: 6px; padding: 8px 14px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 500; }
+button.ghost { background: transparent; color: var(--accent); }
+button.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+main.wrap { padding-block: 20px 48px; display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+
+/* Resumen */
+.stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+.stat b { font: 600 26px/1.15 var(--font-mono); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+.stat.green b { color: var(--ok); } .stat.amber b { color: var(--warn); } .stat.red b { color: var(--bad); }
+
+/* Pestañas */
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.tabs button { background: transparent; color: var(--muted); border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 12px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* Bandeja */
+.filters { display: grid; gap: 10px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; align-items: end; margin-bottom: 12px; }
+.filters label { font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
+.check { display: flex !important; align-items: center; gap: 6px; white-space: nowrap; padding-bottom: 9px; }
+.check input { width: auto; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--chip); }
+tbody tr[aria-current="true"] td { background: var(--chip); }
+.ref { font: 500 13px var(--font-mono); white-space: nowrap; }
+.pill { display: inline-block; padding: 1px 9px; border-radius: 999px; background: var(--chip); font-size: 12.5px; white-space: nowrap; }
+.tag { font: 500 10.5px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+.clock { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font: 500 12.5px/1.6 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clock::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.clock.green { color: var(--ok); background: var(--ok-bg); }
+.clock.amber { color: var(--warn); background: var(--warn-bg); }
+.clock.red { color: var(--bad); background: var(--bad-bg); }
+.clock.none { color: var(--muted); background: var(--chip); }
+.empty { padding: 28px 8px; text-align: center; color: var(--muted); }
+
+/* Detalle */
+.detail-head { display: grid; gap: 4px; margin-bottom: 14px; }
+.detail-head h2 { font-size: 22px; }
+.clockline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 14px; border-radius: 8px; background: var(--chip); margin-bottom: 16px; }
+.stages { list-style: none; padding: 0; margin: 0 0 18px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.stages li { border-top: 3px solid var(--line); padding-top: 6px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.stages li.done { border-top-color: var(--accent); color: var(--ink); }
+.stages li.now { border-top-color: var(--accent); color: var(--ink); font-weight: 600; }
+.stages li.now.amber { border-top-color: var(--warn); } .stages li.now.red { border-top-color: var(--bad); } .stages li.now.green { border-top-color: var(--ok); }
+.stages .d { display: block; font: 400 12px var(--font-mono); color: var(--muted); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 20px; margin: 0 0 16px; }
+.fields div { min-width: 0; }
+.fields dt { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.fields dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.fields .wide { grid-column: 1 / -1; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.reason { display: grid; gap: 8px; margin: 8px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.msg { font-size: 14px; min-height: 1.2em; }
+.msg.err { color: var(--bad); } .msg.ok { color: var(--ok); }
+h3 { font-size: 17px; margin: 18px 0 8px; }
+
+/* Formulario */
+.grid { display: grid; gap: 12px 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.field .hint { font-size: 12px; }
+.field.wide { grid-column: 1 / -1; }
+.field.bad input, .field.bad textarea { border-color: var(--bad); }
+.field .e { color: var(--bad); font-size: 12px; }
+.form-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 16px; }
+
+/* Configuración */
+.sla { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 16px; }
+.radios { display: flex; flex-wrap: wrap; gap: 16px; margin: 6px 0 14px; }
+.radios label { display: flex; align-items: center; gap: 6px; }
+.radios input { width: auto; }
+
+@media (max-width: 640px) {
+  .filters { grid-template-columns: minmax(0, 1fr); }
+  .stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .col-fac, .col-date { display: none; }
+  .role select { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <div class="brand">
+      <h1>LibriNova</h1>
+      <p>Selección, evaluación y adquisición de material bibliográfico</p>
+    </div>
+    <div class="role">
+      <label for="role">Actuar como</label>
+      <select id="role">
+        <option value="requester">Solicitante</option>
+        <option value="librarian">Bibliotecario evaluador</option>
+        <option value="program_director">Director de programa</option>
+        <option value="budget_officer">Responsable presupuestario</option>
+        <option value="acquisitions">Adquisiciones</option>
+        <option value="admin">Administrador</option>
+        <option value="auditor">Auditor</option>
+      </select>
+    </div>
+  </div>
+  <div class="notice"><div class="wrap">Prototipo compartido en la nube de Claude. Los roles se eligen arriba para poder probar el flujo completo; en la versión con servidor los asigna el administrador.</div></div>
+</header>
+
+<main class="wrap">
+  <section class="stats" id="stats" aria-label="Resumen de solicitudes abiertas"></section>
+
+  <section class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-inbox" aria-selected="true" data-tab="inbox">Bandeja</button>
+      <button role="tab" id="tab-new" aria-selected="false" data-tab="new">Nueva solicitud</button>
+      <button role="tab" id="tab-config" aria-selected="false" data-tab="config">Plazos del reloj</button>
+    </div>
+
+    <div id="view-inbox" style="padding-top:16px">
+      <div class="filters">
+        <label for="q">Buscar<input id="q" type="search" placeholder="Referencia, título, ISBN o solicitante"></label>
+        <label for="fstatus">Estado
+          <select id="fstatus">
+            <option value="open">Abiertas</option>
+            <option value="all">Todas</option>
+          </select>
+        </label>
+        <label class="check" for="fexamples"><input id="fexamples" type="checkbox" checked> Mostrar ejemplos</label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Referencia</th><th>Título</th><th class="col-fac">Facultad</th><th>Estado</th><th>Reloj</th><th class="col-date">Recibida</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="6" class="empty">Cargando solicitudes…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <form id="view-new" hidden novalidate style="padding-top:16px">
+      <p class="muted small" style="margin-top:0">Los campos con * son obligatorios. ISBN e ISSN se comprueban con su dígito verificador.</p>
+      <div class="grid">
+        <label class="field wide" for="f-title">Título del material *<input id="f-title" name="title" maxlength="500"></label>
+        <label class="field" for="f-type">Tipo de recurso *
+          <select id="f-type" name="material_type">
+            <option value="print_book">Libro impreso</option>
+            <option value="ebook">Libro electrónico</option>
+            <option value="print_journal">Revista impresa</option>
+            <option value="ebook_journal">Revista electrónica</option>
+            <option value="other">Otro</option>
+          </select>
+        </label>
+        <label class="field" for="f-authors">Autor o autores *<input id="f-authors" name="authors" maxlength="1000"></label>
+        <label class="field" for="f-isbn">ISBN<input id="f-isbn" name="isbn" placeholder="978-0-306-40615-7"></label>
+        <label class="field" for="f-issn">ISSN<input id="f-issn" name="issn" placeholder="0378-5955"></label>
+        <label class="field" for="f-name">Nombre del solicitante *<input id="f-name" name="requester_name" maxlength="200"></label>
+        <label class="field" for="f-email">Correo institucional *<input id="f-email" name="requester_email" type="email" maxlength="254"></label>
+        <label class="field" for="f-faculty">Facultad *<input id="f-faculty" name="faculty" maxlength="200"></label>
+        <label class="field" for="f-program">Programa académico *<input id="f-program" name="program" maxlength="200"></label>
+        <label class="field" for="f-qty">Cantidad<input id="f-qty" name="quantity" type="number" min="1" max="500" value="1"></label>
+        <label class="field" for="f-priority">Prioridad
+          <select id="f-priority" name="priority"><option value="low">Baja</option><option value="normal" selected>Normal</option><option value="high">Alta</option></select>
+        </label>
+        <label class="field" for="f-publisher">Editorial<input id="f-publisher" name="publisher" maxlength="200"></label>
+        <label class="field" for="f-year">Año de publicación<input id="f-year" name="publication_year" type="number" min="1450"></label>
+        <label class="field" for="f-vendor">Proveedor sugerido<input id="f-vendor" name="suggested_vendor" maxlength="200"></label>
+        <label class="field" for="f-url">URL del recurso<input id="f-url" name="url" placeholder="https://…" maxlength="500"></label>
+        <label class="field wide" for="f-just">Justificación académica * <span class="hint">Mínimo 20 caracteres.</span><textarea id="f-just" name="justification" maxlength="5000"></textarea></label>
+        <label class="field wide" for="f-obs">Observaciones<textarea id="f-obs" name="observations" maxlength="2000"></textarea></label>
+      </div>
+      <div class="form-foot">
+        <button type="submit" id="submit">Enviar solicitud</button>
+        <span class="msg" id="form-msg" role="status"></span>
+      </div>
+    </form>
+
+    <div id="view-config" hidden style="padding-top:16px"></div>
+  </section>
+
+  <section class="panel" id="detail" hidden aria-live="polite"></section>
+</main>
+
+<script>
+"use strict";
+
+// ---------- Reglas (mismas que biblioselect/backend/app/workflow.py y clock.py) ----------
+const DAY_MS = 86400000;
+const AMBER_RATIO = 0.8;
+const SLA_DEFAULT = { submitted: 2, under_review: 5, needs_info: 5, returned_for_corrections: 5, awaiting_approval: 5, program_approved: 3, budget_approved: 15 };
+const TERMINAL = new Set(["rejected", "cancelled", "completed"]);
+const EDITABLE = new Set(["submitted", "needs_info", "returned_for_corrections"]);
+const STATUS = {
+  submitted: "Recibida", under_review: "En evaluación", needs_info: "Requiere información",
+  returned_for_corrections: "Devuelta para correcciones", awaiting_approval: "En espera de aprobación",
+  program_approved: "Aprobada por programa", budget_approved: "Presupuesto validado",
+  rejected: "Rechazada", cancelled: "Cancelada", completed: "Finalizada",
+};
+const ROLE = {
+  requester: "Solicitante", librarian: "Bibliotecario evaluador", program_director: "Director de programa",
+  budget_officer: "Responsable presupuestario", acquisitions: "Adquisiciones", admin: "Administrador", auditor: "Auditor",
+};
+const TYPE = { print_book: "Libro impreso", ebook: "Libro electrónico", print_journal: "Revista impresa", ebook_journal: "Revista electrónica", other: "Otro" };
+const PRIORITY = { low: "Baja", normal: "Normal", high: "Alta" };
+const STAFF = new Set(["librarian", "program_director", "budget_officer", "acquisitions", "admin", "auditor"]);
+// approval: el solicitante nunca puede ejecutarla · reason: exige motivo · requester: solo el dueño
+const T = {
+  start_review:           { from: "submitted", to: "under_review", roles: ["librarian"], label: "Iniciar evaluación" },
+  request_info:           { from: "under_review", to: "needs_info", roles: ["librarian"], reason: true, label: "Solicitar información" },
+  return_for_corrections: { from: "under_review", to: "returned_for_corrections", roles: ["librarian"], reason: true, label: "Devolver para correcciones" },
+  send_to_approval:       { from: "under_review", to: "awaiting_approval", roles: ["librarian"], label: "Enviar a aprobación" },
+  reject_library:         { from: "under_review", to: "rejected", roles: ["librarian"], reason: true, label: "Rechazar", danger: true },
+  answer_info:            { from: "needs_info", to: "under_review", roles: ["requester"], label: "Responder información" },
+  resubmit:               { from: "returned_for_corrections", to: "submitted", roles: ["requester"], label: "Reenviar corregida" },
+  approve_program:        { from: "awaiting_approval", to: "program_approved", roles: ["program_director"], approval: true, label: "Aprobar (programa)" },
+  reject_program:         { from: "awaiting_approval", to: "rejected", roles: ["program_director"], approval: true, reason: true, label: "Rechazar (programa)", danger: true },
+  return_program:         { from: "awaiting_approval", to: "returned_for_corrections", roles: ["program_director"], reason: true, label: "Devolver (programa)" },
+  approve_budget:         { from: "program_approved", to: "budget_approved", roles: ["budget_officer"], approval: true, label: "Validar presupuesto" },
+  reject_budget:          { from: "program_approved", to: "rejected", roles: ["budget_officer"], approval: true, reason: true, label: "Rechazar (presupuesto)", danger: true },
+  complete_acquisition:   { from: "budget_approved", to: "completed", roles: ["acquisitions"], label: "Marcar adquisición finalizada" },
+};
+const CANCEL = { label: "Cancelar solicitud", reason: true, danger: true };
+const STAGES = [
+  ["Recepción", ["submitted"]],
+  ["Evaluación", ["under_review", "needs_info", "returned_for_corrections"]],
+  ["Aprobación académica", ["awaiting_approval"]],
+  ["Presupuesto", ["program_approved"]],
+  ["Adquisición", ["budget_approved"]],
+  ["Cierre", ["completed"]],
+];
+const stageOf = (status) => STAGES.findIndex(([, ss]) => ss.includes(status));
+
+// ---------- Utilidades ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtDays = (d) => (Math.round(d * 10) / 10).toLocaleString("es", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtDate = (iso) => new Date(iso).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" });
+const fmtDateTime = (iso) => new Date(iso).toLocaleString("es", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const localISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento local */ } },
+};
+
+// ---------- Identificadores ----------
+const clean = (v) => String(v).replace(/[\s-]/g, "").toUpperCase();
+function isValidIsbn(v) {
+  const s = clean(v);
+  if (/^\d{9}[\dX]$/.test(s)) return [...s].reduce((t, c, i) => t + (10 - i) * (c === "X" ? 10 : +c), 0) % 11 === 0;
+  if (/^\d{13}$/.test(s)) return [...s].reduce((t, c, i) => t + +c * (i % 2 ? 3 : 1), 0) % 10 === 0;
+  return false;
+}
+function isValidIssn(v) {
+  const s = clean(v);
+  if (!/^\d{7}[\dX]$/.test(s)) return false;
+  const check = (11 - ([...s.slice(0, 7)].reduce((t, c, i) => t + +c * (8 - i), 0) % 11)) % 11;
+  return s[7] === (check === 10 ? "X" : String(check));
+}
+
+// ---------- Reloj de días ----------
+function elapsedDays(start, end, cfg) {
+  if (end <= start) return 0;
+  if (cfg.mode === "calendar") return (end - start) / DAY_MS;
+  let total = 0;
+  const day = new Date(start); day.setHours(0, 0, 0, 0);
+  while (day < end) {
+    const next = new Date(day); next.setDate(day.getDate() + 1);
+    const wd = day.getDay();
+    if (wd !== 0 && wd !== 6 && !cfg.holidays.includes(localISO(day))) {
+      const overlap = Math.min(end, next) - Math.max(start, day);
+      if (overlap > 0) total += overlap;
+    }
+    day.setTime(next.getTime());
+  }
+  return total / DAY_MS;
+}
+function segments(history, now, cfg) {
+  return history.map((h, i) => {
+    const start = new Date(h.at);
+    let end = null;
+    if (i + 1 < history.length) end = new Date(history[i + 1].at);
+    else if (TERMINAL.has(h.to)) end = start;
+    return { status: h.to, start, end, days: elapsedDays(start, end || now, cfg) };
+  });
+}
+function levelFor(days, sla) {
+  if (!sla || sla <= 0) return "none";
+  const r = days / sla;
+  return r >= 1 ? "red" : r >= AMBER_RATIO ? "amber" : "green";
+}
+function computeClock(history, now, cfg) {
+  const segs = segments(history, now, cfg);
+  const current = segs[segs.length - 1].status;
+  const running = !TERMINAL.has(current);
+  const stage = running ? segs.filter((s) => s.status === current).reduce((t, s) => t + s.days, 0) : 0;
+  const total = elapsedDays(segs[0].start, running ? now : segs[segs.length - 1].start, cfg);
+  const sla = running ? cfg.sla[current] ?? null : null;
+  return { status: current, stage, sla, level: levelFor(stage, sla), total, running, segs };
+}
+function clockBadge(c) {
+  const text = c.running ? `${fmtDays(c.stage)} / ${c.sla ?? "–"} d` : `${fmtDays(c.total)} d`;
+  const title = c.running ? `${LEVEL[c.level]} · ${fmtDays(c.total)} días en total` : "Reloj detenido";
+  return `<span class="clock ${c.level}" title="${esc(title)}">${esc(text)}</span>`;
+}
+const LEVEL = { green: "En plazo", amber: "Por vencer", red: "Vencida", none: "Cerrada" };
+
+// ---------- Estado ----------
+const S = {
+  db: null, user: null, me: null, canWrite: null,
+  role: store.get("ln.role") || "librarian",
+  requests: [], loaded: false, offline: false, loadError: "",
+  cfg: { mode: "business", sla: { ...SLA_DEFAULT }, holidays: [] },
+  selected: null, tab: "inbox", q: "", fstatus: "open", examples: true,
+  pending: null, // { id, action, text }
+  msg: null,     // { id, text, kind }
+};
+
+function normalizeCfg(d) {
+  const sla = { ...SLA_DEFAULT };
+  for (const [k, v] of Object.entries(d?.sla || {})) if (k in SLA_DEFAULT && Number(v) > 0) sla[k] = Number(v);
+  return {
+    mode: d?.mode === "calendar" ? "calendar" : "business",
+    sla,
+    holidays: Array.isArray(d?.holidays) ? d.holidays.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)) : [],
+  };
+}
+
+// ---------- Permisos (validados también al escribir, ver act()) ----------
+const isOwner = (r) => !!S.me && r.createdBy === S.me;
+function visible(r) {
+  if (STAFF.has(S.role)) return true;
+  return isOwner(r);
+}
+function actionsFor(r) {
+  if (TERMINAL.has(r.status) || S.role === "auditor") return [];
+  const out = [];
+  for (const [name, t] of Object.entries(T)) {
+    if (t.from !== r.status) continue;
+    const allowed = t.roles.includes("requester") ? isOwner(r) : t.roles.includes(S.role);
+    if (!allowed) continue;
+    out.push({ name, ...t, blocked: t.approval && isOwner(r) ? "No puedes aprobar una solicitud que tú enviaste." : "" });
+  }
+  if ((isOwner(r) && EDITABLE.has(r.status)) || ["librarian", "admin"].includes(S.role)) out.push({ name: "cancel", ...CANCEL });
+  return out;
+}
+
+// ---------- Render ----------
+function withClock(r) { return { r, c: computeClock(r.history || [], new Date(), S.cfg) }; }
+
+function renderStats(items) {
+  const open = items.filter((x) => x.c.running);
+  const n = (lvl) => open.filter((x) => x.c.level === lvl).length;
+  const unit = S.cfg.mode === "business" ? "días hábiles" : "días calendario";
+  $("stats").innerHTML = `
+    <div class="stat"><b>${open.length}</b><span>Abiertas · reloj en ${unit}</span></div>
+    <div class="stat green"><b>${n("green")}</b><span><i class="dot" style="color:var(--ok)"></i>En plazo</span></div>
+    <div class="stat amber"><b>${n("amber")}</b><span><i class="dot" style="color:var(--warn)"></i>Por vencer (≥ 80 %)</span></div>
+    <div class="stat red"><b>${n("red")}</b><span><i class="dot" style="color:var(--bad)"></i>Vencidas</span></div>`;
+}
+
+function renderRows(items) {
+  const rows = $("rows");
+  if (S.offline) {
+    rows.innerHTML = `<tr><td colspan="6" class="empty">Abre esta página con tu cuenta de claude.ai para ver y crear solicitudes compartidas.</td></tr>`;
+    return;
+  }
+  if (S.loadError) { rows.innerHTML = `<tr><td colspan="6" class="empty">${esc(S.loadError)}</td></tr>`; return; }
+  if (!S.loaded) return;
+  const q = S.q.trim().toLowerCase();
+  const list = items
+    .filter((x) => S.examples || !x.r.example)
+    .filter((x) => S.fstatus === "all" || (S.fstatus === "open" ? x.c.running : x.r.status === S.fstatus))
+    .filter((x) => !q || [x.r.id, x.r.title, x.r.isbn, x.r.issn, x.r.requester_name].some((v) => String(v || "").toLowerCase().includes(q)))
+    .sort((a, b) => {
+      const rank = { red: 0, amber: 1, green: 2, none: 3 };
+      return rank[a.c.level] - rank[b.c.level] || (b.c.sla ? b.c.stage / b.c.sla : 0) - (a.c.sla ? a.c.stage / a.c.sla : 0) || String(b.r.createdAt).localeCompare(String(a.r.createdAt));
+    });
+  if (!list.length) {
+    const hint = S.role === "requester" ? "Aún no has enviado solicitudes. Usa «Nueva solicitud» para crear la primera." : "No hay solicitudes con estos filtros.";
+    rows.innerHTML = `<tr><td colspan="6" class="empty">${hint}</td></tr>`;
+    return;
+  }
+  rows.innerHTML = list.map(({ r, c }) => `
+    <tr data-id="${esc(r.id)}" tabindex="0" ${r.id === S.selected ? 'aria-current="true"' : ""}>
+      <td class="ref">${esc(r.id)}</td>
+      <td>${esc(r.title)}${r.example ? '<span class="tag">Ejemplo</span>' : ""}</td>
+      <td class="col-fac">${esc(r.faculty)}</td>
+      <td><span class="pill">${esc(STATUS[r.status] || r.status)}</span></td>
+      <td>${clockBadge(c)}</td>
+      <td class="col-date mono small">${esc(fmtDate(r.createdAt))}</td>
+    </tr>`).join("");
+}
+
+function renderDetail(items) {
+  const box = $("detail");
+  const item = items.find((x) => x.r.id === S.selected);
+  if (!item || !visible(item.r)) { box.hidden = true; return; }
+  if (box.contains(document.activeElement) && document.activeElement.tagName === "TEXTAREA") return; // no interrumpir la escritura
+  const { r, c } = item;
+  box.hidden = false;
+  const unit = S.cfg.mode === "business" ? "días hábiles" : "días";
+  const now = stageOf(c.running ? r.status : (r.history?.[r.history.length - 1]?.from ?? r.status));
+  const byStage = STAGES.map(([, ss]) => c.segs.filter((s) => ss.includes(s.status)).reduce((t, s) => t + s.days, 0));
+  const stages = STAGES.map(([label], i) => {
+    const cls = r.status === "completed" ? "done" : i < now ? "done" : i === now ? `now ${c.running ? c.level : ""}` : "";
+    const d = byStage[i] > 0 || i === now ? `${fmtDays(byStage[i])} d` : "–";
+    return `<li class="${cls}">${esc(label)}<span class="d">${d}</span></li>`;
+  }).join("");
+  const clockText = c.running
+    ? `${clockBadge(c)} <span><strong>${LEVEL[c.level]}</strong> · ${fmtDays(c.stage)} de ${c.sla ?? "–"} ${unit} en «${esc(STATUS[r.status])}»</span><span class="muted">${fmtDays(c.total)} ${unit} desde que se recibió</span>`
+    : `${clockBadge(c)} <span>Reloj detenido: ${esc(STATUS[r.status])}</span><span class="muted">${fmtDays(c.total)} ${unit} en total</span>`;
+  const field = (k, v, wide) => v || v === 0 ? `<div class="${wide ? "wide" : ""}"><dt>${k}</dt><dd>${esc(v)}</dd></div>` : "";
+  const acts = actionsFor(r);
+  const pending = S.pending?.id === r.id ? S.pending : null;
+  const actionsHtml = S.role === "auditor"
+    ? `<p class="muted small">El auditor consulta sin modificar.</p>`
+    : acts.length
+      ? `<div class="actions">${acts.map((a) => `<button type="button" class="${a.danger ? "danger" : a.name === "cancel" ? "ghost" : ""}" data-act="${a.name}" ${a.blocked ? `disabled title="${esc(a.blocked)}"` : ""}>${esc(a.label)}</button>`).join("")}</div>
+         ${acts.some((a) => a.blocked) ? `<p class="muted small">${esc(acts.find((a) => a.blocked).blocked)}</p>` : ""}`
+      : `<p class="muted small">No hay acciones para «${esc(ROLE[S.role])}» en este estado.</p>`;
+  const reasonHtml = pending ? `
+    <div class="reason">
+      <label class="field" for="reason">Motivo para «${esc((T[pending.action] || CANCEL).label)}» *<textarea id="reason" maxlength="1000">${esc(pending.text)}</textarea></label>
+      <div class="actions"><button type="button" data-confirm="1">Confirmar</button><button type="button" class="ghost" data-confirm="0">Volver</button></div>
+    </div>` : "";
+  const msg = S.msg?.id === r.id ? `<p class="msg ${S.msg.kind}" role="status">${esc(S.msg.text)}</p>` : "";
+  const hist = (r.history || []).map((h, i) => {
+    const seg = c.segs[i];
+    return `<tr><td class="mono small">${esc(fmtDateTime(h.at))}</td><td>${esc((T[h.action] || (h.action === "cancel" ? CANCEL : null))?.label || (h.action === "create" ? "Solicitud creada" : h.action))}</td>
+      <td>${esc(STATUS[h.to] || h.to)}</td><td class="mono small">${TERMINAL.has(h.to) ? "–" : `${fmtDays(seg.days)} d${seg.end ? "" : " (en curso)"}`}</td>
+      <td><span data-uid="${esc(h.actorId || "")}">${esc(ROLE[h.role] || "")}</span></td><td>${esc(h.reason || "")}</td></tr>`;
+  }).join("");
+  box.innerHTML = `
+    <div class="detail-head">
+      <span class="ref">${esc(r.id)}${r.example ? '<span class="tag">Ejemplo</span>' : ""}</span>
+      <h2>${esc(r.title)}</h2>
+    </div>
+    <div class="clockline">${clockText}</div>
+    <ol class="stages" aria-label="Etapas del flujo">${stages}</ol>
+    ${actionsHtml}${reasonHtml}${msg}
+    <dl class="fields">
+      ${field("Tipo", TYPE[r.material_type])}${field("ISBN", r.isbn)}${field("ISSN", r.issn)}${field("Autores", r.authors)}
+      ${field("Solicitante", `${r.requester_name} · ${r.requester_email}`)}${field("Facultad", r.faculty)}${field("Programa", r.program)}
+      ${field("Cantidad", r.quantity)}${field("Prioridad", PRIORITY[r.priority])}${field("Editorial", r.publisher)}${field("Año", r.publication_year)}
+      ${field("Proveedor sugerido", r.suggested_vendor)}${field("URL", r.url)}
+      ${field("Justificación académica", r.justification, true)}${field("Observaciones", r.observations, true)}${field("Motivo de cancelación", r.cancel_reason, true)}
+    </dl>
+    <h3>Historial</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Fecha</th><th>Acción</th><th>Estado</th><th>Duración</th><th>Responsable</th><th>Motivo</th></tr></thead>
+      <tbody>${hist}</tbody>
+    </table></div>`;
+  fillNames(box);
+}
+
+async function fillNames(root) {
+  if (!S.user) return;
+  const spans = [...root.querySelectorAll("[data-uid]")].filter((s) => s.dataset.uid && s.dataset.uid !== "ejemplo");
+  const ids = [...new Set(spans.map((s) => s.dataset.uid))];
+  if (!ids.length) return;
+  const ps = await S.user.profiles(ids);
+  for (const s of spans) {
+    const p = ps[s.dataset.uid];
+    const role = s.textContent;
+    if (p?.isMe) s.textContent = `Tú · ${role}`;
+    else if (p?.name) s.textContent = `${p.name} · ${role}`;
+  }
+}
+
+function renderConfig() {
+  const box = $("view-config");
+  if (box.contains(document.activeElement)) return;
+  const editable = S.role === "admin";
+  const labels = { submitted: "Recepción", under_review: "Evaluación bibliotecaria", needs_info: "Información del solicitante", returned_for_corrections: "Correcciones del solicitante", awaiting_approval: "Aprobación académica", program_approved: "Validación presupuestaria", budget_approved: "Adquisición" };
+  box.innerHTML = `
+    <p class="muted small" style="margin-top:0">Plazo objetivo de cada etapa. El reloj se pone ámbar al 80 % del plazo y rojo al cumplirse. ${editable ? "" : "Elige «Administrador» arriba para cambiarlos."}</p>
+    <fieldset style="border:0;padding:0;margin:0" ${editable ? "" : "disabled"}>
+      <div class="radios" role="radiogroup" aria-label="Cómo se cuentan los días">
+        <label for="mode-b"><input type="radio" id="mode-b" name="mode" value="business" ${S.cfg.mode === "business" ? "checked" : ""}> Días hábiles (lunes a viernes, sin festivos)</label>
+        <label for="mode-c"><input type="radio" id="mode-c" name="mode" value="calendar" ${S.cfg.mode === "calendar" ? "checked" : ""}> Días calendario</label>
+      </div>
+      <div class="sla">${Object.keys(SLA_DEFAULT).map((k) => `<label class="field" for="sla-${k}">${labels[k]} (días)<input id="sla-${k}" type="number" min="0.5" max="365" step="0.5" value="${S.cfg.sla[k]}"></label>`).join("")}</div>
+      <label class="field" for="holidays" style="margin-top:12px">Festivos (AAAA-MM-DD, separados por coma)<textarea id="holidays" placeholder="2026-12-08, 2026-12-25">${esc(S.cfg.holidays.join(", "))}</textarea></label>
+      <div class="form-foot"><button type="button" id="save-config">Guardar plazos</button><span class="msg" id="config-msg" role="status"></span></div>
+    </fieldset>`;
+}
+
+function render() {
+  const items = S.requests.filter(visible).map(withClock);
+  renderStats(items);
+  renderRows(items);
+  renderDetail(items);
+  if (S.tab === "config") renderConfig();
+}
+
+// ---------- Escrituras ----------
+function writeError(e) {
+  if (e?.code === "invalid_argument") return "Tu acceso a esta página es de solo lectura. Pide al propietario acceso de colaborador.";
+  if (e?.code === "quota_exceeded") return "Se alcanzó el límite de almacenamiento de la página.";
+  return e?.message || "No se pudo guardar. Inténtalo de nuevo.";
+}
+
+async function act(r, action, reason) {
+  const ref = S.db.doc(`requests/${r.id}`);
+  const snap = await ref.get();
+  const cur = snap.exists ? snap.data() : null;
+  if (!cur || cur.status !== r.status) throw new Error("La solicitud cambió mientras tanto. Revisa su estado actual.");
+  const allowed = actionsFor({ ...cur, id: r.id }).find((a) => a.name === action && !a.blocked);
+  if (!allowed) throw new Error("Esta acción ya no está disponible para tu rol.");
+  const to = action === "cancel" ? "cancelled" : T[action].to;
+  const entry = { from: cur.status, to, action, actorId: S.me, role: S.role, reason: reason || null, at: new Date().toISOString() };
+  const patch = { status: to, history: [...(cur.history || []), entry] };
+  if (action === "cancel") patch.cancel_reason = reason;
+  await ref.update(patch);
+}
+
+async function runAction(action) {
+  const r = S.requests.find((x) => x.id === S.selected);
+  if (!r) return;
+  const def = T[action] || CANCEL;
+  if (def.reason && !S.pending) { S.pending = { id: r.id, action, text: "" }; S.msg = null; render(); $("reason")?.focus(); return; }
+  try {
+    await act(r, action, S.pending?.text.trim());
+    S.msg = { id: r.id, text: `Hecho: ${def.label}.`, kind: "ok" };
+  } catch (e) {
+    S.msg = { id: r.id, text: writeError(e), kind: "err" };
+  }
+  S.pending = null;
+  render();
+}
+
+function readForm() {
+  const f = $("view-new");
+  const v = (n) => f.elements[n].value.trim();
+  const data = {
+    title: v("title"), material_type: v("material_type"), authors: v("authors"),
+    isbn: v("isbn") ? clean(v("isbn")) : null, issn: v("issn") ? clean(v("issn")) : null,
+    requester_name: v("requester_name"), requester_email: v("requester_email"), faculty: v("faculty"), program: v("program"),
+    quantity: Number(v("quantity") || 1), priority: v("priority"), publisher: v("publisher") || null,
+    publication_year: v("publication_year") ? Number(v("publication_year")) : null, suggested_vendor: v("suggested_vendor") || null,
+    url: v("url") || null, justification: v("justification"), observations: v("observations") || null,
+  };
+  const errors = {};
+  for (const k of ["title", "authors", "requester_name", "faculty", "program"]) if (data[k].length < 2) errors[k] = "Obligatorio.";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.requester_email)) errors.requester_email = "Escribe un correo válido.";
+  if (data.justification.length < 20) errors.justification = `Faltan ${20 - data.justification.length} caracteres.`;
+  if (data.isbn && !isValidIsbn(data.isbn)) errors.isbn = "ISBN no válido: revisa el dígito verificador.";
+  if (data.issn && !isValidIssn(data.issn)) errors.issn = "ISSN no válido: revisa el dígito verificador.";
+  if (!Number.isInteger(data.quantity) || data.quantity < 1 || data.quantity > 500) errors.quantity = "Entre 1 y 500.";
+  if (data.publication_year && (data.publication_year < 1450 || data.publication_year > new Date().getFullYear() + 1)) errors.publication_year = "Año fuera de rango.";
+  if (data.url && !/^https?:\/\/\S+$/.test(data.url)) errors.url = "Debe empezar por http:// o https://";
+  return { data, errors };
+}
+
+function showFormErrors(errors) {
+  for (const el of $("view-new").querySelectorAll(".field")) {
+    el.classList.remove("bad");
+    el.querySelector(".e")?.remove();
+    const input = el.querySelector("input, select, textarea");
+    const err = input && errors[input.name];
+    if (err) { el.classList.add("bad"); el.insertAdjacentHTML("beforeend", `<span class="e">${esc(err)}</span>`); }
+  }
+}
+
+async function submitForm(ev) {
+  ev.preventDefault();
+  const msg = $("form-msg");
+  if (!S.db) { msg.className = "msg err"; msg.textContent = "Abre la página con tu cuenta de claude.ai para enviar solicitudes."; return; }
+  if (!S.me) { msg.className = "msg err"; msg.textContent = "No pudimos identificarte en esta página; no es posible registrar la solicitud."; return; }
+  const { data, errors } = readForm();
+  showFormErrors(errors);
+  if (Object.keys(errors).length) { msg.className = "msg err"; msg.textContent = "Revisa los campos marcados."; return; }
+  const id = `LN-${new Date().getFullYear()}-${crypto.getRandomValues(new Uint8Array(3)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "").toUpperCase()}`;
+  const at = new Date().toISOString();
+  $("submit").disabled = true;
+  try {
+    await S.db.doc(`requests/${id}`).set({
+      ...data, status: "submitted", createdBy: S.me, createdAt: at, example: false, cancel_reason: null,
+      history: [{ from: null, to: "submitted", action: "create", actorId: S.me, role: "requester", reason: null, at }],
+    });
+    $("view-new").reset();
+    msg.className = "msg ok"; msg.textContent = `Solicitud ${id} enviada.`;
+    S.selected = id; S.fstatus = "open"; $("fstatus").value = "open";
+    setTab("inbox");
+  } catch (e) {
+    msg.className = "msg err"; msg.textContent = writeError(e);
+  } finally {
+    $("submit").disabled = false;
+  }
+}
+
+async function saveConfig() {
+  const msg = $("config-msg");
+  const sla = {};
+  for (const k of Object.keys(SLA_DEFAULT)) {
+    const n = Number($(`sla-${k}`).value);
+    if (!(n > 0 && n <= 365)) { msg.className = "msg err"; msg.textContent = "Cada plazo debe estar entre 0,5 y 365 días."; return; }
+    sla[k] = n;
+  }
+  const holidays = $("holidays").value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+  const bad = holidays.find((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d));
+  if (bad) { msg.className = "msg err"; msg.textContent = `Fecha no válida: ${bad}. Usa AAAA-MM-DD.`; return; }
+  const mode = document.querySelector('input[name="mode"]:checked')?.value || "business";
+  try {
+    await S.db.doc("config/clock").set({ mode, sla, holidays });
+    msg.className = "msg ok"; msg.textContent = "Plazos guardados para todos.";
+  } catch (e) {
+    msg.className = "msg err";
+    msg.textContent = e?.code === "invalid_argument" ? "Solo quienes editan esta página (Editor o propietario) pueden cambiar los plazos." : writeError(e);
+  }
+}
+
+// ---------- Eventos ----------
+function setTab(tab) {
+  S.tab = tab;
+  for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+  $("view-inbox").hidden = tab !== "inbox";
+  $("view-new").hidden = tab !== "new";
+  $("view-config").hidden = tab !== "config";
+  render();
+}
+document.querySelector(".tabs").addEventListener("click", (e) => { const t = e.target.closest("[data-tab]"); if (t) setTab(t.dataset.tab); });
+$("role").value = S.role;
+$("role").addEventListener("change", (e) => { S.role = e.target.value; store.set("ln.role", S.role); S.pending = null; S.msg = null; render(); });
+$("q").addEventListener("input", (e) => { S.q = e.target.value; render(); });
+$("fstatus").addEventListener("change", (e) => { S.fstatus = e.target.value; render(); });
+$("fexamples").addEventListener("change", (e) => { S.examples = e.target.checked; render(); });
+const openRow = (tr) => { if (!tr) return; S.selected = tr.dataset.id; S.pending = null; S.msg = null; render(); $("detail").scrollIntoView({ behavior: "smooth", block: "start" }); };
+$("rows").addEventListener("click", (e) => openRow(e.target.closest("tr[data-id]")));
+$("rows").addEventListener("keydown", (e) => { if (e.key === "Enter") openRow(e.target.closest("tr[data-id]")); });
+$("detail").addEventListener("click", (e) => {
+  const a = e.target.closest("[data-act]");
+  if (a) { runAction(a.dataset.act); return; }
+  const c = e.target.closest("[data-confirm]");
+  if (!c) return;
+  if (c.dataset.confirm === "0") { S.pending = null; render(); return; }
+  if (!S.pending.text.trim()) { S.msg = { id: S.pending.id, text: "Escribe el motivo antes de confirmar.", kind: "err" }; render(); return; }
+  runAction(S.pending.action);
+});
+$("detail").addEventListener("input", (e) => { if (e.target.id === "reason" && S.pending) S.pending.text = e.target.value; });
+$("view-new").addEventListener("submit", submitForm);
+$("view-config").addEventListener("click", (e) => { if (e.target.id === "save-config") saveConfig(); });
+
+// ---------- Arranque ----------
+const use = (name) => (window.claude?.use ? window.claude.use(name) : Promise.resolve(null));
+(async () => {
+  render();
+  const [db, user] = await Promise.all([use("db"), use("user")]);
+  S.db = db; S.user = user;
+  S.me = user ? await user.id() : null;
+  if (!db) { S.offline = true; render(); return; }
+  db.collection("requests").limit(500).onSnapshot(
+    (snap) => { S.requests = snap.docs.map((d) => ({ id: d.id, ...d.data() })); S.loaded = true; S.loadError = ""; render(); },
+    () => { S.loadError = "No se pudieron cargar las solicitudes. Recarga la página."; render(); },
+  );
+  db.doc("config/clock").onSnapshot((snap) => { if (snap.exists) { S.cfg = normalizeCfg(snap.data()); render(); } }, () => {});
+  setInterval(render, 60000); // el reloj avanza solo; no escribe nada
+})();
+</script>
