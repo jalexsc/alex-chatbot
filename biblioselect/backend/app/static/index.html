@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BiblioSelect · MVP</title>
+  <style>
+    :root { --bg:#f5f6f8; --card:#fff; --ink:#1d2330; --muted:#5b6474; --accent:#1f4e79; --line:#dde1e8; --warn:#8a5a00; --bad:#9b1c1c; --ok:#1d6b3a; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#14171d; --card:#1d222b; --ink:#e6e9ef; --muted:#9aa3b2; --accent:#7fb2e5; --line:#2f3642; --warn:#e0b465; --bad:#f08b8b; --ok:#7fd29a; }
+    }
+    :root[data-theme="light"] { color-scheme: light; }
+    body { margin:0; font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+    header { background:var(--accent); color:#fff; padding:14px 16px; }
+    header h1 { margin:0; font-size:18px; }
+    main { max-width:960px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+    h2 { margin:0 0 12px; font-size:16px; }
+    label { display:block; font-size:13px; color:var(--muted); margin-bottom:10px; }
+    input, select, textarea { width:100%; box-sizing:border-box; margin-top:4px; padding:8px; font:inherit; color:inherit; background:var(--bg); border:1px solid var(--line); border-radius:6px; }
+    textarea { min-height:70px; }
+    .grid { display:grid; gap:0 14px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    button { font:inherit; padding:8px 14px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; margin:4px 4px 4px 0; }
+    button.secondary { background:transparent; color:var(--accent); }
+    button.danger { background:transparent; color:var(--bad); border-color:var(--bad); }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; font-size:14px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:var(--line); font-size:12px; }
+    .muted { color:var(--muted); font-size:13px; }
+    .error { color:var(--bad); font-size:14px; min-height:1em; }
+    .hidden { display:none; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    a.link { color:var(--accent); cursor:pointer; text-decoration:underline; }
+    @media (max-width:600px) { main { padding:10px; } th:nth-child(4), td:nth-child(4) { display:none; } }
+  </style>
+</head>
+<body>
+  <header><h1>BiblioSelect · Solicitudes bibliográficas (MVP)</h1></header>
+  <main>
+    <section class="card">
+      <h2>Identidad de desarrollo</h2>
+      <p class="muted">El MVP usa una cabecera de desarrollo, no SSO. Solo funciona con <code>BIBLIOSELECT_DEV_AUTH=1</code>.</p>
+      <div class="row">
+        <input id="email" placeholder="correo@example.edu" style="max-width:320px">
+        <button id="login">Entrar</button>
+        <span id="who" class="muted"></span>
+      </div>
+      <div id="authError" class="error"></div>
+    </section>
+
+    <section class="card hidden" id="newCard">
+      <h2>Nueva solicitud</h2>
+      <form id="form">
+        <div class="grid">
+          <label>Título *<input name="title" required></label>
+          <label>Tipo de recurso *
+            <select name="material_type">
+              <option value="print_book">Libro impreso</option>
+              <option value="ebook">Libro electrónico</option>
+              <option value="print_journal">Revista impresa</option>
+              <option value="ebook_journal">Revista electrónica</option>
+              <option value="other">Otro</option>
+            </select>
+          </label>
+          <label>ISBN<input name="isbn" placeholder="978-…"></label>
+          <label>ISSN<input name="issn" placeholder="0378-5955"></label>
+          <label>Autor o autores *<input name="authors" required></label>
+          <label>Nombre del solicitante *<input name="requester_name" required></label>
+          <label>Correo institucional *<input name="requester_email" type="email" required></label>
+          <label>Facultad *<input name="faculty" required></label>
+          <label>Programa académico *<input name="program" required></label>
+          <label>Cantidad<input name="quantity" type="number" min="1" max="500" value="1"></label>
+          <label>Prioridad
+            <select name="priority"><option value="low">Baja</option><option value="normal" selected>Normal</option><option value="high">Alta</option></select>
+          </label>
+          <label>Editorial<input name="publisher"></label>
+          <label>Año de publicación<input name="publication_year" type="number"></label>
+          <label>Proveedor sugerido<input name="suggested_vendor"></label>
+          <label>URL del recurso<input name="url" placeholder="https://…"></label>
+        </div>
+        <label>Justificación académica * (mínimo 20 caracteres)<textarea name="justification" required minlength="20"></textarea></label>
+        <label>Observaciones<textarea name="observations"></textarea></label>
+        <button type="submit">Enviar solicitud</button>
+        <div id="formError" class="error"></div>
+      </form>
+    </section>
+
+    <section class="card hidden" id="listCard">
+      <h2>Solicitudes</h2>
+      <table>
+        <thead><tr><th>Referencia</th><th>Título</th><th>Estado</th><th>Actualizada</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+
+    <section class="card hidden" id="detailCard">
+      <h2 id="detailTitle"></h2>
+      <div id="detailBody"></div>
+      <div id="actions"></div>
+      <h2 style="margin-top:16px">Historial</h2>
+      <table><thead><tr><th>Fecha</th><th>Acción</th><th>Estado</th><th>Responsable</th><th>Motivo</th></tr></thead><tbody id="history"></tbody></table>
+      <div id="actionError" class="error"></div>
+    </section>
+  </main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LABELS = {
+  submitted: "Recibida", under_review: "En evaluación", needs_info: "Requiere información",
+  returned_for_corrections: "Devuelta para correcciones", awaiting_approval: "En espera de aprobación",
+  program_approved: "Aprobada por programa", budget_approved: "Presupuesto validado",
+  rejected: "Rechazada", cancelled: "Cancelada", completed: "Finalizada",
+};
+const ACTION_LABELS = {
+  start_review: "Iniciar evaluación", request_info: "Solicitar información", return_for_corrections: "Devolver para correcciones",
+  send_to_approval: "Enviar a aprobación", reject_library: "Rechazar (biblioteca)", answer_info: "Responder información",
+  resubmit: "Reenviar", approve_program: "Aprobar (programa)", reject_program: "Rechazar (programa)",
+  return_program: "Devolver (programa)", approve_budget: "Validar presupuesto", reject_budget: "Rechazar (presupuesto)",
+  complete_acquisition: "Marcar adquisición finalizada", cancel: "Cancelar solicitud",
+};
+const NEEDS_REASON = new Set(["request_info","return_for_corrections","reject_library","reject_program","return_program","reject_budget","cancel"]);
+let user = null, current = null;
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", "X-Dev-User": sessionStorage.getItem("bs_user") || "", ...(opts.headers || {}) } });
+  const body = res.headers.get("content-type")?.includes("json") ? await res.json() : null;
+  if (!res.ok) throw new Error(body?.detail || `Error ${res.status}`);
+  return body;
+}
+
+async function login() {
+  $("authError").textContent = "";
+  const email = $("email").value.trim().toLowerCase();
+  sessionStorage.setItem("bs_user", email);
+  try {
+    user = await api("/api/me");
+    $("who").textContent = `${user.full_name} · ${user.roles.join(", ") || "solicitante"}`;
+    ["newCard", "listCard"].forEach((id) => $(id).classList.remove("hidden"));
+    await loadList();
+  } catch (e) {
+    user = null; sessionStorage.removeItem("bs_user");
+    $("authError").textContent = e.message;
+  }
+}
+
+async function loadList() {
+  const items = await api("/api/requests");
+  $("rows").innerHTML = items.map((r) => `
+    <tr><td>${esc(r.reference)}</td><td><a class="link" data-id="${esc(r.id)}">${esc(r.title)}</a></td>
+    <td><span class="pill">${esc(LABELS[r.status] || r.status)}</span></td><td>${esc(r.updated_at.slice(0, 16).replace("T", " "))}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted">Sin solicitudes.</td></tr>`;
+}
+
+async function openDetail(id) {
+  current = await api(`/api/requests/${id}`);
+  $("detailCard").classList.remove("hidden");
+  $("detailTitle").textContent = `${current.reference} · ${current.title}`;
+  const fields = [["Estado", LABELS[current.status] || current.status], ["Tipo", current.material_type], ["ISBN", current.isbn], ["ISSN", current.issn],
+    ["Autores", current.authors], ["Solicitante", `${current.requester_name} (${current.requester_email})`], ["Facultad / programa", `${current.faculty} / ${current.program}`],
+    ["Cantidad", current.quantity], ["Prioridad", current.priority], ["Justificación", current.justification], ["Observaciones", current.observations]];
+  $("detailBody").innerHTML = fields.filter(([, v]) => v !== null && v !== undefined && v !== "")
+    .map(([k, v]) => `<p><strong>${esc(k)}:</strong> ${esc(v)}</p>`).join("");
+  $("actions").innerHTML = current.available_actions.map((a) =>
+    `<button class="${a === "cancel" || a.startsWith("reject") ? "danger" : ""}" data-action="${esc(a)}">${esc(ACTION_LABELS[a] || a)}</button>`).join("")
+    || `<p class="muted">Sin acciones disponibles para su rol en este estado.</p>`;
+  const hist = await api(`/api/requests/${id}/history`);
+  $("history").innerHTML = hist.map((h) => `<tr><td>${esc(h.at.slice(0, 16).replace("T", " "))}</td><td>${esc(h.action)}</td>
+    <td>${esc(LABELS[h.to_status] || h.to_status)}</td><td>${esc(h.actor_email)}</td><td>${esc(h.reason || "")}</td></tr>`).join("");
+  $("actionError").textContent = "";
+  $("detailCard").scrollIntoView({ behavior: "smooth" });
+}
+
+async function runAction(action) {
+  let reason = null;
+  if (NEEDS_REASON.has(action)) {
+    reason = prompt("Motivo (obligatorio):");
+    if (!reason || !reason.trim()) return;
+  }
+  try {
+    if (action === "cancel") {
+      await api(`/api/requests/${current.id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
+    } else {
+      await api(`/api/requests/${current.id}/transitions`, { method: "POST", body: JSON.stringify({ action, reason }) });
+    }
+    await loadList();
+    await openDetail(current.id);
+  } catch (e) { $("actionError").textContent = e.message; }
+}
+
+$("form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("formError").textContent = "";
+  const data = Object.fromEntries(new FormData($("form")).entries());
+  const payload = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (v === "") continue;
+    payload[k] = ["quantity", "publication_year"].includes(k) ? Number(v) : v;
+  }
+  try {
+    const created = await api("/api/requests", { method: "POST", body: JSON.stringify(payload) });
+    $("form").reset();
+    await loadList();
+    await openDetail(created.id);
+  } catch (e) {
+    $("formError").textContent = typeof e.message === "string" ? e.message : "No se pudo enviar.";
+  }
+});
+
+$("login").addEventListener("click", login);
+$("rows").addEventListener("click", (ev) => { const id = ev.target.dataset.id; if (id) openDetail(id).catch((e) => alert(e.message)); });
+$("actions").addEventListener("click", (ev) => { const a = ev.target.dataset.action; if (a) runAction(a); });
+if (sessionStorage.getItem("bs_user")) { $("email").value = sessionStorage.getItem("bs_user"); login(); }
+</script>
+</body>
+</html>

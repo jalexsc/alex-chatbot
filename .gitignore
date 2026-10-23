@@ -3,6 +3,7 @@
 /*
 # ...y permite explícitamente lo que necesita alex-chatbot.
 !/alex-chatbot/
+!/biblioselect/
 !/folio_login_module.py
 !/README.md
 !/.gitignore
@@ -16,3 +17,5 @@ alex-chatbot/frontend/node_modules/
 alex-chatbot/frontend/dist/
 okapi_customers.json
 **/okapi_customers.json
+**/*.db
+**/.pytest_cache/
