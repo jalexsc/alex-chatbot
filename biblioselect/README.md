@@ -18,6 +18,7 @@ en el servidor.
 | Bitácora de auditoría (consulta solo para admin/auditor) | Hecho |
 | Administración de usuarios y roles (admin) | Hecho |
 | Interfaz web mínima (una página estática) | Hecho |
+| Reloj de días por etapa con semáforo (verde, ámbar, rojo) | Hecho |
 | Autenticación institucional (SSO/OIDC) | **Pendiente** — MVP usa identidad de desarrollo |
 | Conector FOLIO (búsqueda de duplicados, existencias, fondos, pedidos) | **Pendiente** |
 | Notificaciones por correo y WhatsApp | **Pendiente** |
@@ -57,6 +58,17 @@ python -m pytest -q
 ```
 
 Documentación interactiva de la API: http://localhost:8000/docs
+
+## Variables de entorno
+
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./biblioselect.db` | Conexión a la base de datos |
+| `BIBLIOSELECT_DEV_AUTH` | (apagado) | `1` activa la identidad de desarrollo |
+| `BIBLIOSELECT_CLOCK_MODE` | `business` | Reloj en días `business` (hábiles) o `calendar` |
+| `BIBLIOSELECT_HOLIDAYS` | (vacío) | Festivos, separados por coma: `2026-12-08,2026-12-25` |
+| `BIBLIOSELECT_SLA_DAYS` | ver `app/clock.py` | Plazos por estado en JSON: `{"under_review": 7}` |
+| `BIBLIOSELECT_TZ` | UTC | Zona horaria para cortar los días: `America/Bogota` |
 
 ## Autenticación de desarrollo
 

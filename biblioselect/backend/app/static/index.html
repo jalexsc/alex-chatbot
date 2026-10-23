@@ -13,8 +13,8 @@
     body { margin:0; font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
     header { background:var(--accent); color:#fff; padding:14px 16px; }
     header h1 { margin:0; font-size:18px; }
-    main { max-width:960px; margin:0 auto; padding:16px; display:grid; gap:16px; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+    main { max-width:960px; margin:0 auto; padding:16px; display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; overflow-x:auto; }
     h2 { margin:0 0 12px; font-size:16px; }
     label { display:block; font-size:13px; color:var(--muted); margin-bottom:10px; }
     input, select, textarea { width:100%; box-sizing:border-box; margin-top:4px; padding:8px; font:inherit; color:inherit; background:var(--bg); border:1px solid var(--line); border-radius:6px; }
@@ -26,12 +26,14 @@
     table { width:100%; border-collapse:collapse; }
     th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; font-size:14px; }
     .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:var(--line); font-size:12px; }
+    .clock { display:inline-block; padding:1px 8px; border-radius:999px; border:1px solid currentColor; font-size:12px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .clock.green { color:var(--ok); } .clock.amber { color:var(--warn); } .clock.red { color:var(--bad); } .clock.none { color:var(--muted); }
     .muted { color:var(--muted); font-size:13px; }
     .error { color:var(--bad); font-size:14px; min-height:1em; }
     .hidden { display:none; }
     .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     a.link { color:var(--accent); cursor:pointer; text-decoration:underline; }
-    @media (max-width:600px) { main { padding:10px; } th:nth-child(4), td:nth-child(4) { display:none; } }
+    @media (max-width:600px) { main { padding:10px; } th:nth-child(5), td:nth-child(5) { display:none; } }
   </style>
 </head>
 <body>
@@ -88,7 +90,7 @@
     <section class="card hidden" id="listCard">
       <h2>Solicitudes</h2>
       <table>
-        <thead><tr><th>Referencia</th><th>Título</th><th>Estado</th><th>Actualizada</th></tr></thead>
+        <thead><tr><th>Referencia</th><th>Título</th><th>Estado</th><th>Reloj</th><th>Actualizada</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </section>
@@ -98,7 +100,7 @@
       <div id="detailBody"></div>
       <div id="actions"></div>
       <h2 style="margin-top:16px">Historial</h2>
-      <table><thead><tr><th>Fecha</th><th>Acción</th><th>Estado</th><th>Responsable</th><th>Motivo</th></tr></thead><tbody id="history"></tbody></table>
+      <table><thead><tr><th>Fecha</th><th>Acción</th><th>Estado</th><th>Duración</th><th>Responsable</th><th>Motivo</th></tr></thead><tbody id="history"></tbody></table>
       <div id="actionError" class="error"></div>
     </section>
   </main>
@@ -120,7 +122,15 @@ const ACTION_LABELS = {
   complete_acquisition: "Marcar adquisición finalizada", cancel: "Cancelar solicitud",
 };
 const NEEDS_REASON = new Set(["request_info","return_for_corrections","reject_library","reject_program","return_program","reject_budget","cancel"]);
+const LEVEL_LABELS = { green: "En plazo", amber: "Por vencer", red: "Vencida", none: "Cerrada" };
 let user = null, current = null;
+
+// Reloj de días (M3): "días en la etapa / plazo" con color según el semáforo del servidor.
+function clockBadge(c) {
+  if (!c) return "";
+  const text = c.running ? `${c.stage_days} / ${c.sla_days ?? "–"} d` : `${c.total_days} d`;
+  return `<span class="clock ${esc(c.level)}" title="${esc(LEVEL_LABELS[c.level])} · ${esc(c.total_days)} días en total">${esc(text)}</span>`;
+}
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", "X-Dev-User": sessionStorage.getItem("bs_user") || "", ...(opts.headers || {}) } });
@@ -148,8 +158,9 @@ async function loadList() {
   const items = await api("/api/requests");
   $("rows").innerHTML = items.map((r) => `
     <tr><td>${esc(r.reference)}</td><td><a class="link" data-id="${esc(r.id)}">${esc(r.title)}</a></td>
-    <td><span class="pill">${esc(LABELS[r.status] || r.status)}</span></td><td>${esc(r.updated_at.slice(0, 16).replace("T", " "))}</td></tr>`).join("")
-    || `<tr><td colspan="4" class="muted">Sin solicitudes.</td></tr>`;
+    <td><span class="pill">${esc(LABELS[r.status] || r.status)}</span></td><td>${clockBadge(r.clock)}</td>
+    <td>${esc(r.updated_at.slice(0, 16).replace("T", " "))}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="muted">Sin solicitudes.</td></tr>`;
 }
 
 async function openDetail(id) {
@@ -159,14 +170,20 @@ async function openDetail(id) {
   const fields = [["Estado", LABELS[current.status] || current.status], ["Tipo", current.material_type], ["ISBN", current.isbn], ["ISSN", current.issn],
     ["Autores", current.authors], ["Solicitante", `${current.requester_name} (${current.requester_email})`], ["Facultad / programa", `${current.faculty} / ${current.program}`],
     ["Cantidad", current.quantity], ["Prioridad", current.priority], ["Justificación", current.justification], ["Observaciones", current.observations]];
-  $("detailBody").innerHTML = fields.filter(([, v]) => v !== null && v !== undefined && v !== "")
+  const c = current.clock;
+  const unit = c && c.mode === "business" ? "días hábiles" : "días";
+  const clockLine = !c ? "" : c.running
+    ? `<p><strong>Reloj:</strong> ${clockBadge(c)} ${esc(LEVEL_LABELS[c.level])} · ${esc(c.stage_days)} de ${esc(c.sla_days ?? "–")} ${unit} en esta etapa · ${esc(c.total_days)} ${unit} en total</p>`
+    : `<p><strong>Reloj:</strong> ${clockBadge(c)} detenido · ${esc(c.total_days)} ${unit} en total</p>`;
+  $("detailBody").innerHTML = clockLine + fields.filter(([, v]) => v !== null && v !== undefined && v !== "")
     .map(([k, v]) => `<p><strong>${esc(k)}:</strong> ${esc(v)}</p>`).join("");
   $("actions").innerHTML = current.available_actions.map((a) =>
     `<button class="${a === "cancel" || a.startsWith("reject") ? "danger" : ""}" data-action="${esc(a)}">${esc(ACTION_LABELS[a] || a)}</button>`).join("")
     || `<p class="muted">Sin acciones disponibles para su rol en este estado.</p>`;
   const hist = await api(`/api/requests/${id}/history`);
   $("history").innerHTML = hist.map((h) => `<tr><td>${esc(h.at.slice(0, 16).replace("T", " "))}</td><td>${esc(h.action)}</td>
-    <td>${esc(LABELS[h.to_status] || h.to_status)}</td><td>${esc(h.actor_email)}</td><td>${esc(h.reason || "")}</td></tr>`).join("");
+    <td>${esc(LABELS[h.to_status] || h.to_status)}</td><td>${esc(h.duration_days)} d${h.open ? " (en curso)" : ""}</td>
+    <td>${esc(h.actor_email)}</td><td>${esc(h.reason || "")}</td></tr>`).join("");
   $("actionError").textContent = "";
   $("detailCard").scrollIntoView({ behavior: "smooth" });
 }

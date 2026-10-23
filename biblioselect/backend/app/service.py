@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from datetime import datetime
 from typing import Any
 
 from pydantic import ValidationError
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from .clock import Clock, ClockSettings, compute_clock
 from .db import AuditLog, BibliographicRequest, User, WorkflowEntry, utcnow
 from .errors import BusinessRuleError, ConflictError, ForbiddenError, NotFoundError
 from .schemas import RequestIn, TransitionIn, request_fields
@@ -101,6 +103,24 @@ def history(db: Session, actor: User, request_id: str) -> list[WorkflowEntry]:
             select(WorkflowEntry).where(WorkflowEntry.request_id == req.id).order_by(WorkflowEntry.id)
         ).all()
     )
+
+
+def clocks_for(
+    db: Session, requests: list[BibliographicRequest], settings: ClockSettings
+) -> dict[str, Clock]:
+    """Reloj de días de cada solicitud, con una sola consulta al historial."""
+    if not requests:
+        return {}
+    entries: dict[str, list[tuple[str, datetime]]] = {r.id: [] for r in requests}
+    rows = db.execute(
+        select(WorkflowEntry.request_id, WorkflowEntry.to_status, WorkflowEntry.created_at)
+        .where(WorkflowEntry.request_id.in_(entries))
+        .order_by(WorkflowEntry.id)
+    )
+    for request_id, to_status, created_at in rows:
+        entries[request_id].append((to_status, created_at))
+    now = utcnow()
+    return {rid: compute_clock(e, now, settings) for rid, e in entries.items() if e}
 
 
 # ---------- reglas de transición ----------

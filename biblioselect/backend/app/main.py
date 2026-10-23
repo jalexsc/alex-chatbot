@@ -16,7 +16,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from . import service
-from .db import AuditLog, Base, BibliographicRequest, User, UserRole, WorkflowEntry
+from .clock import Clock, ClockSettings, segments
+from .db import AuditLog, Base, BibliographicRequest, User, UserRole, WorkflowEntry, utcnow
 from .errors import DomainError
 from .schemas import CancelIn, RequestIn, TransitionIn, UserIn
 from .workflow import Role
@@ -24,7 +25,21 @@ from .workflow import Role
 STATIC_DIR = Path(__file__).parent / "static"
 
 
-def _serialize_request(req: BibliographicRequest, actions: list[str] | None = None) -> dict[str, Any]:
+def _serialize_clock(clock: Clock) -> dict[str, Any]:
+    return {
+        "status": clock.status,
+        "stage_days": round(clock.stage_days, 1),
+        "sla_days": clock.sla_days,
+        "level": clock.level,
+        "total_days": round(clock.total_days, 1),
+        "running": clock.running,
+        "mode": "business" if clock.business_days else "calendar",
+    }
+
+
+def _serialize_request(
+    req: BibliographicRequest, actions: list[str] | None = None, clock: Clock | None = None
+) -> dict[str, Any]:
     data = {
         "id": req.id,
         "reference": req.reference,
@@ -55,10 +70,13 @@ def _serialize_request(req: BibliographicRequest, actions: list[str] | None = No
     }
     if actions is not None:
         data["available_actions"] = actions
+    if clock is not None:
+        data["clock"] = _serialize_clock(clock)
     return data
 
 
-def _serialize_history(entries: list[WorkflowEntry]) -> list[dict[str, Any]]:
+def _serialize_history(entries: list[WorkflowEntry], settings: ClockSettings) -> list[dict[str, Any]]:
+    segs = segments([(e.to_status, e.created_at) for e in entries], utcnow(), settings)
     return [
         {
             "from_status": e.from_status,
@@ -67,8 +85,10 @@ def _serialize_history(entries: list[WorkflowEntry]) -> list[dict[str, Any]]:
             "actor_email": e.actor_email,
             "reason": e.reason,
             "at": e.created_at.isoformat(),
+            "duration_days": round(seg.days, 1),  # tiempo en ``to_status`` durante este tramo
+            "open": seg.end is None,
         }
-        for e in entries
+        for e, seg in zip(entries, segs, strict=True)
     ]
 
 
@@ -82,15 +102,25 @@ def _serialize_user(user: User) -> dict[str, Any]:
     }
 
 
-def create_app(database_url: str | None = None, dev_auth: bool | None = None) -> FastAPI:
+def create_app(
+    database_url: str | None = None,
+    dev_auth: bool | None = None,
+    clock_settings: ClockSettings | None = None,
+) -> FastAPI:
     url = database_url or os.getenv("DATABASE_URL", "sqlite:///./biblioselect.db")
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     engine = create_engine(url, connect_args=connect_args)
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     dev_enabled = dev_auth if dev_auth is not None else os.getenv("BIBLIOSELECT_DEV_AUTH") == "1"
+    clock = clock_settings or ClockSettings.from_env()
 
     app = FastAPI(title="BiblioSelect", version="0.1.0")
+
+    def present(db: Session, user: User, req: BibliographicRequest) -> dict[str, Any]:
+        return _serialize_request(
+            req, service.available_actions(user, req), service.clocks_for(db, [req], clock).get(req.id)
+        )
 
     def get_db() -> Iterator[Session]:
         with session_factory() as session:
@@ -134,7 +164,7 @@ def create_app(database_url: str | None = None, dev_auth: bool | None = None) ->
     @app.post("/api/requests", status_code=201)
     def create_request(payload: RequestIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
         req = service.create_request(db, user, payload)
-        return _serialize_request(req, service.available_actions(user, req))
+        return present(db, user, req)
 
     @app.get("/api/requests")
     def list_requests(
@@ -143,12 +173,13 @@ def create_app(database_url: str | None = None, dev_auth: bool | None = None) ->
         db: Session = Depends(get_db),
     ):
         items = service.list_requests(db, user, status)
-        return [_serialize_request(r) for r in items]
+        clocks = service.clocks_for(db, items, clock)
+        return [_serialize_request(r, clock=clocks.get(r.id)) for r in items]
 
     @app.get("/api/requests/{request_id}")
     def get_request(request_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
         req = service.get_request(db, user, request_id)
-        return _serialize_request(req, service.available_actions(user, req))
+        return present(db, user, req)
 
     @app.patch("/api/requests/{request_id}")
     def update_request(
@@ -158,7 +189,7 @@ def create_app(database_url: str | None = None, dev_auth: bool | None = None) ->
         db: Session = Depends(get_db),
     ):
         req = service.update_request(db, user, request_id, changes)
-        return _serialize_request(req, service.available_actions(user, req))
+        return present(db, user, req)
 
     @app.post("/api/requests/{request_id}/transitions")
     def transition(
@@ -168,16 +199,16 @@ def create_app(database_url: str | None = None, dev_auth: bool | None = None) ->
         db: Session = Depends(get_db),
     ):
         req = service.apply_transition(db, user, request_id, payload)
-        return _serialize_request(req, service.available_actions(user, req))
+        return present(db, user, req)
 
     @app.post("/api/requests/{request_id}/cancel")
     def cancel(request_id: str, payload: CancelIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
         req = service.cancel_request(db, user, request_id, payload.reason)
-        return _serialize_request(req, service.available_actions(user, req))
+        return present(db, user, req)
 
     @app.get("/api/requests/{request_id}/history")
     def request_history(request_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
-        return _serialize_history(service.history(db, user, request_id))
+        return _serialize_history(service.history(db, user, request_id), clock)
 
     @app.post("/api/admin/users", status_code=201)
     def create_user(
@@ -220,6 +251,7 @@ def create_app(database_url: str | None = None, dev_auth: bool | None = None) ->
         ]
 
     app.state.session_factory = session_factory
+    app.state.clock_settings = clock
     return app
 
 
